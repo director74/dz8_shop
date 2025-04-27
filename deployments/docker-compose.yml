@@ -1,0 +1,350 @@
+version: '3.8'
+
+services:
+  billing-service:
+    build:
+      context: ..
+      dockerfile: ./build/Dockerfile
+      args:
+        SERVICE_NAME: billing-service
+    container_name: billing-service
+    ports:
+      - "8081:8081"
+    environment:
+      - HTTP_PORT=8081
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=billing
+      - POSTGRES_SSLMODE=disable
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_VHOST=/
+      - JWT_SIGNING_KEY=shared_microservices_secret_key
+      - JWT_TOKEN_ISSUER=microservices-auth
+      - JWT_TOKEN_AUDIENCES=microservices
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - app-network
+
+  notification-service:
+    build:
+      context: ..
+      dockerfile: ./build/Dockerfile
+      args:
+        SERVICE_NAME: notification-service
+    container_name: notification-service
+    ports:
+      - "8082:8082"
+    environment:
+      - HTTP_PORT=8082
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=notifications
+      - POSTGRES_SSLMODE=disable
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_VHOST=/
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - FROM_EMAIL=notification@example.com
+      - JWT_SIGNING_KEY=shared_microservices_secret_key
+      - JWT_TOKEN_ISSUER=microservices-auth
+      - JWT_TOKEN_AUDIENCES=microservices
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    restart: on-failure
+    networks:
+      - app-network
+
+  payment-service:
+    build:
+      context: ..
+      dockerfile: ./build/Dockerfile
+      args:
+        SERVICE_NAME: payment-service
+    container_name: payment-service
+    ports:
+      - "8083:8083"
+    environment:
+      - HTTP_PORT=8083
+      - POSTGRES_HOST=payment-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=payments
+      - POSTGRES_SSLMODE=disable
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_VHOST=/
+      - JWT_SIGNING_KEY=shared_microservices_secret_key
+      - JWT_TOKEN_ISSUER=microservices-auth
+      - JWT_TOKEN_AUDIENCES=microservices
+    depends_on:
+      payment-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - app-network
+
+  warehouse-service:
+    build:
+      context: ..
+      dockerfile: ./build/Dockerfile
+      args:
+        SERVICE_NAME: warehouse-service
+    container_name: warehouse-service
+    ports:
+      - "8084:8084"
+    environment:
+      - HTTP_PORT=8084
+      - POSTGRES_HOST=warehouse-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=warehouse
+      - POSTGRES_SSLMODE=disable
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_VHOST=/
+      - JWT_SIGNING_KEY=shared_microservices_secret_key
+      - JWT_TOKEN_ISSUER=microservices-auth
+      - JWT_TOKEN_AUDIENCES=microservices
+    depends_on:
+      warehouse-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - app-network
+
+  delivery-service:
+    build:
+      context: ..
+      dockerfile: ./build/Dockerfile
+      args:
+        SERVICE_NAME: delivery-service
+    container_name: delivery-service
+    ports:
+      - "8085:8085"
+    environment:
+      - HTTP_PORT=8085
+      - POSTGRES_HOST=delivery-db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=delivery
+      - POSTGRES_SSLMODE=disable
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_VHOST=/
+      - JWT_SIGNING_KEY=shared_microservices_secret_key
+      - JWT_TOKEN_ISSUER=microservices-auth
+      - JWT_TOKEN_AUDIENCES=microservices
+    depends_on:
+      delivery-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - app-network
+
+  order-service:
+    build:
+      context: ..
+      dockerfile: ./build/Dockerfile
+      args:
+        SERVICE_NAME: order-service
+    container_name: order-service
+    ports:
+      - "8080:8080"
+    environment:
+      - HTTP_PORT=8080
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=orders
+      - POSTGRES_SSLMODE=disable
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASSWORD=guest
+      - RABBITMQ_VHOST=/
+      - BILLING_SERVICE_URL=http://billing-service:8081
+      - NOTIFICATION_SERVICE_URL=http://notification-service:8082
+      - PAYMENT_SERVICE_URL=http://payment-service:8083
+      - WAREHOUSE_SERVICE_URL=http://inventory-service:8084
+      - DELIVERY_SERVICE_URL=http://delivery-service:8085
+      - JWT_SIGNING_KEY=shared_microservices_secret_key
+      - JWT_TOKEN_ISSUER=microservices-auth
+      - JWT_TOKEN_AUDIENCES=microservices
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      billing-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      warehouse-service:
+        condition: service_started
+      delivery-service:
+        condition: service_started
+    restart: on-failure
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:17.2-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_MULTIPLE_DATABASES=orders,billing,notifications
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../build/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+      - ../migrations/order_service:/migrations/order_service
+      - ../migrations/billing_service:/migrations/billing_service
+      - ../migrations/notification_service:/migrations/notification_service
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  payment-db:
+    image: postgres:17.2-alpine
+    container_name: payment-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=payments
+    volumes:
+      - payment-db-data:/var/lib/postgresql/data
+      - ../migrations/payment_service:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  warehouse-db:
+    image: postgres:17.2-alpine
+    container_name: warehouse-db
+    ports:
+      - "5434:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=warehouse
+    volumes:
+      - warehouse-db-data:/var/lib/postgresql/data
+      - ../migrations/warehouse_service:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  delivery-db:
+    image: postgres:17.2-alpine
+    container_name: delivery-db
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=delivery
+    volumes:
+      - delivery-db-data:/var/lib/postgresql/data
+      - ../migrations/delivery_service:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3.12.10-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - app-network
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  payment-db-data:
+  warehouse-db-data:
+  delivery-db-data:

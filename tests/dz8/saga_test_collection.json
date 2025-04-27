@@ -1,0 +1,1354 @@
+{
+	"info": {
+		"_postman_id": "f5d8f8a1-c1b2-4e5d-8f6a-7b8c9d0e1f2a",
+		"name": "Тесты саги ДЗ №8",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "0"
+	},
+	"item": [
+		{
+			"name": "1. Подготовка",
+			"item": [
+				{
+					"name": "Регистрация пользователя",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Генерация случайных email и пароля ПЕРЕД запросом",
+									"const randomSuffix = Math.random().toString(36).substring(2, 10);",
+									"const userEmail = `testuser_${randomSuffix}@example.com`;",
+									"const userPassword = `password_${randomSuffix}`;",
+									"",
+									"pm.collectionVariables.set(\"userEmail\", userEmail);",
+									"pm.collectionVariables.set(\"userPassword\", userPassword);",
+									"",
+									"console.log(`Подготовка к регистрации пользователя: ${userEmail}`)"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"// Логика установки переменных перенесена в pre-request скрипт",
+									"console.log(`Запрос на регистрацию для ${pm.collectionVariables.get(\"userEmail\")} отправлен.`)"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"username\": \"{{userEmail}}\",\"email\": \"{{userEmail}}\",\"password\": \"{{userPassword}}\",\"first_name\": \"Тестовый\", \"last_name\": \"ПользовательСаги\"}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/auth/register",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Авторизация пользователя",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Получен токен и ID пользователя\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    console.log(\"Auth Response Body:\", JSON.stringify(jsonData));",
+									"    pm.expect(jsonData.token).to.be.a('string');",
+									"    pm.expect(jsonData.id).to.exist; // ID находится на верхнем уровне",
+									"    pm.expect(jsonData.id).to.be.a('number'); // Или 'string', если ID - строка",
+									"    ",
+									"    pm.collectionVariables.set(\"authToken\", jsonData.token);",
+									"    pm.collectionVariables.set(\"userId\", jsonData.id); // Сохраняем ID из jsonData.id",
+									"    console.log(`Авторизован пользователь ID: ${jsonData.id}`)",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"username\": \"{{userEmail}}\",\"password\": \"{{userPassword}}\"}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/auth/login",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Регистрация и авторизация пользователя"
+		},
+		{
+			"name": "2. Успешный сценарий",
+			"item": [
+				{
+					"name": "Пополнение баланса",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const token = pm.collectionVariables.get(\"authToken\");",
+									"if (!token) {",
+									"    console.error(\"ОШИБКА: Токен авторизации (authToken) не найден в переменных коллекции!\");",
+									"    throw new Error(\"Необходимо успешно выполнить авторизацию перед пополнением баланса.\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Пополняем баланс на 1000.0 для успешного сценария.\");",
+									"// Здесь тесты не нужны, это подготовительный шаг для сценария"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"amount\": 1000.00}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlBilling}}/api/v1/billing/deposit",
+							"host": [
+								"{{baseUrlBilling}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"billing",
+								"deposit"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Создание успешного заказа",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 201 или 202\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([201, 202]);",
+									"});",
+									"pm.test(\"Получен ID заказа\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.id).to.exist;",
+									"    pm.expect(jsonData.id).to.be.a('number');",
+									"    pm.collectionVariables.set(\"successOrderId\", jsonData.id);",
+									"    console.log(`ID успешного заказа: ${jsonData.id}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"items\":[{\"product_id\":1,\"quantity\":1,\"price\":10.0}],\"delivery\":{\"address\":\"123 Main St\",\"time_slot_id\":\"1\",\"zone_id\":\"1\"}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/orders",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Ожидание 15с для саги успеха",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Ожидание 15 секунд для обработки успешной саги...\");",
+									"setTimeout(function() {",
+									"    console.log(\"Задержка завершена.\");",
+									"}, 15000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlOrder}}/health",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Фиктивный запрос для выполнения логики задержки"
+					},
+					"response": []
+				},
+				{
+					"name": "Проверка статуса успешного заказа",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Статус заказа 'completed'\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"completed\");",
+									"    console.log(`Заказ ${pm.collectionVariables.get(\"successOrderId\")} имеет статус: ${jsonData.status}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/orders/{{successOrderId}}",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders",
+								"{{successOrderId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Проверка резервирования на складе",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Резервация на складе существует и подтверждена\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.reservations).to.be.an('array').that.is.not.empty;",
+									"    pm.expect(jsonData.reservations[0].status).to.eql(\"active\"); ",
+									"    console.log(`Статус резервации на складе для заказа ${pm.collectionVariables.get(\"successOrderId\")}: ${jsonData.reservations[0].status}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlWarehouse}}/api/v1/warehouse/order/{{successOrderId}}",
+							"host": [
+								"{{baseUrlWarehouse}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"warehouse",
+								"order",
+								"{{successOrderId}}"
+							]
+						},
+						"description": "Использует эндпоинт из api_endpoints.txt для проверки статуса резервации на складе для заказа."
+					},
+					"response": []
+				}
+			],
+			"description": "Тест успешного создания заказа и завершения саги"
+		},
+		{
+			"name": "3. Сбой - Оплата",
+			"item": [
+				{
+					"name": "Сброс баланса (перед сбоем оплаты)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const token = pm.collectionVariables.get(\"authToken\");",
+									"if (!token) {",
+									"    console.error(\"ОШИБКА: Токен авторизации (authToken) не найден!\");",
+									"    throw new Error(\"Требуется авторизация.\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Пытаемся сбросить баланс пользователя, снимая большую сумму. Ошибка 400 ожидаема, если баланс уже 0.\");",
+									"// Не проверяем статус, так как цель - обнулить баланс, даже если это вызовет ошибку"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"amount\": 990.00}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlBilling}}/api/v1/billing/withdraw",
+							"host": [
+								"{{baseUrlBilling}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"billing",
+								"withdraw"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Пополнение на недостаточную сумму (для сбоя оплаты)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const token = pm.collectionVariables.get(\"authToken\");",
+									"if (!token) {",
+									"    console.error(\"ОШИБКА: Токен авторизации (authToken) не найден!\");",
+									"    throw new Error(\"Требуется авторизация.\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Пополняем баланс на 10.0, что недостаточно для заказа на 50.0.\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"amount\": 10.00}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlBilling}}/api/v1/billing/deposit",
+							"host": [
+								"{{baseUrlBilling}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"billing",
+								"deposit"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Создание заказа (сбой оплаты)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 201 или 202\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([201, 202]);",
+									"});",
+									"pm.test(\"Получен ID заказа\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.id).to.exist;",
+									"    pm.expect(jsonData.id).to.be.a('number');",
+									"    pm.collectionVariables.set(\"failPaymentOrderId\", jsonData.id);",
+									"    console.log(`ID заказа со сбоем оплаты: ${jsonData.id}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"items\":[{\"product_id\":2,\"quantity\":1,\"price\":50.0}],\"delivery\":{\"address\":\"456 Fail St\",\"time_slot_id\":\"2\",\"zone_id\":\"1\"}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/orders",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders"
+							]
+						},
+						"description": "Создание заказа, который должен упасть на шаге оплаты из-за недостатка средств."
+					},
+					"response": []
+				},
+				{
+					"name": "Ожидание 5с для саги сбоя оплаты",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Ожидание 5 секунд для обработки саги сбоя оплаты...\");",
+									"setTimeout(function() {",
+									"    console.log(\"Задержка завершена.\");",
+									"}, 5000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlOrder}}/health",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Фиктивный запрос для выполнения логики задержки"
+					},
+					"response": []
+				},
+				{
+					"name": "Проверка статуса заказа со сбоем оплаты",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Статус заказа 'failed' или 'cancelled'\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.be.oneOf([\"failed\", \"cancelled\"]); ",
+									"    console.log(`Заказ ${pm.collectionVariables.get(\"failPaymentOrderId\")} имеет статус: ${jsonData.status}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/orders/{{failPaymentOrderId}}",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders",
+								"{{failPaymentOrderId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Проверка уведомлений пользователя о сбое оплаты",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Уведомление о сбое оплаты существует для заказа\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.notifications).to.be.an('array');",
+									"    console.log(\"Полученные уведомления:\", JSON.stringify(jsonData.notifications));",
+									"",
+									"    const expectedOrderIdStr = pm.collectionVariables.get(\"failPaymentOrderId\");",
+									"    const expectedOrderId = parseInt(expectedOrderIdStr);",
+									"    console.log(`Ищем уведомление для заказа ${expectedOrderId} (строка: '${expectedOrderIdStr}')`);",
+									"",
+									"    if (isNaN(expectedOrderId)) {",
+									"        pm.expect.fail(`Ожидаемый ID заказа (${expectedOrderIdStr}) не является числом.`);",
+									"        return;",
+									"    }",
+									"",
+									"    const orderIdRegex = /заказ(?:ом)?\\s*#(\\d+)/i; // Regex для поиска 'заказ #<число>' или 'заказом #<число>'",
+									"",
+									"    let foundNotification = jsonData.notifications.some(notification => {",
+									"        console.log(`Проверяем уведомление ID ${notification.id}, Subject: ${notification.subject}, Message: ${notification.message}`);",
+									"        const subjectMatch = notification.subject.match(orderIdRegex);",
+									"        const messageMatch = notification.message.match(orderIdRegex);",
+									"        // Пытаемся извлечь ID из темы или сообщения",
+									"        const notificationOrderId = subjectMatch ? parseInt(subjectMatch[1]) : (messageMatch ? parseInt(messageMatch[1]) : null);",
+									"",
+									"        console.log(`Извлеченный ID из уведомления: ${notificationOrderId}`);",
+									"",
+									"        // Проверяем, совпадает ли извлеченный ID с ожидаемым И содержит ли сообщение текст 'недостаточно средств на счете'",
+									"        const isCorrectOrder = notificationOrderId === expectedOrderId;",
+									"        const indicatesProblem = notification.message.toLowerCase().includes(\"недостаточно средств на счете\");",
+									"",
+									"        console.log(`Совпадает ID? ${isCorrectOrder}. Указывает на проблему? ${indicatesProblem}`);",
+									"",
+									"        return isCorrectOrder && indicatesProblem;",
+									"    });",
+									"",
+									"    pm.expect(foundNotification, \"Уведомление о нехватке средств для заказа \" + expectedOrderId + \" не найдено или ID/текст не совпал\").to.be.true;",
+									"    console.log(`Проверены уведомления для пользователя ${pm.collectionVariables.get(\"userId\")} по заказу ${expectedOrderId}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlNotification}}/api/v1/users/{{userId}}/notifications",
+							"host": [
+								"{{baseUrlNotification}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{userId}}",
+								"notifications"
+							]
+						},
+						"description": "Проверяет уведомления для конкретного пользователя, ожидая одно, связанное со сбоем оплаты конкретного заказа."
+					},
+					"response": []
+				}
+			],
+			"description": "Тест сбоя саги и компенсации при ошибке на шаге оплаты"
+		},
+		{
+			"name": "4. Сбой - Склад",
+			"item": [
+				{
+					"name": "Пополнение баланса",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const token = pm.collectionVariables.get(\"authToken\");",
+									"if (!token) {",
+									"    console.error(\"ОШИБКА: Токен авторизации (authToken) не найден!\");",
+									"    throw new Error(\"Требуется авторизация.\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Пополняем баланс на 5000.0 перед тестом сбоя склада.\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"amount\": 5000.00}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlBilling}}/api/v1/billing/deposit",
+							"host": [
+								"{{baseUrlBilling}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"billing",
+								"deposit"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Создание заказа (сбой склада)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 201 или 202\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([201, 202]);",
+									"});",
+									"pm.test(\"Получен ID заказа\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.id).to.exist;",
+									"    pm.expect(jsonData.id).to.be.a('number');",
+									"    pm.collectionVariables.set(\"failWarehouseOrderId\", jsonData.id);",
+									"     console.log(`ID заказа со сбоем склада: ${jsonData.id}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"items\":[{\"product_id\":3,\"quantity\":999,\"price\":5.0}],\"delivery\":{\"address\":\"789 Warehouse Fail Ave\",\"time_slot_id\":\"3\",\"zone_id\":\"1\"}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/orders",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders"
+							]
+						},
+						"description": "Создание заказа, который должен упасть на шаге резервирования на складе (из-за quantity: 999)."
+					},
+					"response": []
+				},
+				{
+					"name": "Ожидание 5с для саги сбоя склада",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Ожидание 5 секунд для обработки саги сбоя склада...\");",
+									"setTimeout(function() {",
+									"    console.log(\"Задержка завершена.\");",
+									"}, 5000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlOrder}}/health",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Фиктивный запрос для выполнения логики задержки"
+					},
+					"response": []
+				},
+				{
+					"name": "Проверка статуса заказа со сбоем склада",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Статус заказа 'failed' или 'cancelled'\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.be.oneOf([\"failed\", \"cancelled\"]); ",
+									"     console.log(`Заказ ${pm.collectionVariables.get(\"failWarehouseOrderId\")} имеет статус: ${jsonData.status}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/orders/{{failWarehouseOrderId}}",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders",
+								"{{failWarehouseOrderId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Проверка компенсации платежа",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Для сбоя на складе платеж должен был быть создан, а затем отменен",
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Статус платежа 'refunded'\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql(\"refunded\");",
+									"    console.log(`Статус платежа для заказа ${pm.collectionVariables.get(\"failWarehouseOrderId\")}: ${jsonData.status}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlPayment}}/api/v1/payments/by-order/{{failWarehouseOrderId}}",
+							"host": [
+								"{{baseUrlPayment}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payments",
+								"by-order",
+								"{{failWarehouseOrderId}}"
+							]
+						},
+						"description": "Проверка, что платеж, связанный с неудавшимся заказом, был компенсирован (статус cancelled)."
+					},
+					"response": []
+				}
+			],
+			"description": "Тест сбоя саги и компенсации при ошибке на шаге склада"
+		},
+		{
+			"name": "5. Сбой - Доставка",
+			"item": [
+				{
+					"name": "Пополнение баланса (перед сбоем доставки)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"const token = pm.collectionVariables.get(\"authToken\");",
+									"if (!token) {",
+									"    console.error(\"ОШИБКА: Токен авторизации (authToken) не найден!\");",
+									"    throw new Error(\"Требуется авторизация.\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Пополняем баланс на 100.0 перед тестом сбоя доставки.\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"amount\": 100.00}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlBilling}}/api/v1/billing/deposit",
+							"host": [
+								"{{baseUrlBilling}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"billing",
+								"deposit"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Создание заказа (сбой доставки)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 201 или 202\", function () {",
+									"    pm.expect(pm.response.code).to.be.oneOf([201, 202]);",
+									"});",
+									"pm.test(\"Получен ID заказа\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.id).to.exist;",
+									"    pm.expect(jsonData.id).to.be.a('number');",
+									"    pm.collectionVariables.set(\"failDeliveryOrderId\", jsonData.id);",
+									"    console.log(`ID заказа со сбоем доставки: ${jsonData.id}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"items\":[{\"product_id\":4,\"quantity\":1,\"price\":20.0}],\"delivery\":{\"address\":\"ADDRESS_INVALID\",\"time_slot_id\":\"4\",\"zone_id\":\"2\"}}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/orders",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders"
+							]
+						},
+						"description": "Создание заказа, который должен упасть на шаге резервирования доставки (из-за невалидного адреса/слота)."
+					},
+					"response": []
+				},
+				{
+					"name": "Ожидание 5с для саги сбоя доставки",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"Ожидание 5 секунд для обработки саги сбоя доставки...\");",
+									"setTimeout(function() {",
+									"    console.log(\"Задержка завершена.\");",
+									"}, 5000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlOrder}}/health",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Фиктивный запрос для выполнения логики задержки"
+					},
+					"response": []
+				},
+				{
+					"name": "Проверка статуса заказа со сбоем доставки",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Статус заказа 'failed' или 'cancelled'\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.be.oneOf([\"failed\", \"cancelled\"]); ",
+									"     console.log(`Заказ ${pm.collectionVariables.get(\"failDeliveryOrderId\")} имеет статус: ${jsonData.status}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlOrder}}/api/v1/orders/{{failDeliveryOrderId}}",
+							"host": [
+								"{{baseUrlOrder}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"orders",
+								"{{failDeliveryOrderId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Проверка компенсации склада",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Для сбоя на доставке резервация на складе должна была быть создана, а затем отменена",
+									"pm.test(\"Код ответа 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Статус резервации на складе 'released' или 'cancelled'\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.reservations).to.be.an('array').that.is.not.empty;",
+									"    pm.expect(jsonData.reservations[0].status).to.be.oneOf([\"released\", \"cancelled\"]); ",
+									"    console.log(`Статус резервации на складе для заказа ${pm.collectionVariables.get(\"failDeliveryOrderId\")}: ${jsonData.reservations[0].status}`);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrlWarehouse}}/api/v1/warehouse/order/{{failDeliveryOrderId}}",
+							"host": [
+								"{{baseUrlWarehouse}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"warehouse",
+								"order",
+								"{{failDeliveryOrderId}}"
+							]
+						},
+						"description": "Проверка, что резервация на складе для неудавшегося заказа была компенсирована (статус released/cancelled)."
+					},
+					"response": []
+				}
+			],
+			"description": "Тест сбоя саги и компенсации при ошибке на шаге доставки"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrlOrder",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "baseUrlBilling",
+			"value": "http://localhost:8081",
+			"type": "string"
+		},
+		{
+			"key": "baseUrlPayment",
+			"value": "http://localhost:8083",
+			"type": "string"
+		},
+		{
+			"key": "baseUrlWarehouse",
+			"value": "http://localhost:8084",
+			"type": "string"
+		},
+		{
+			"key": "baseUrlDelivery",
+			"value": "http://localhost:8085",
+			"type": "string"
+		},
+		{
+			"key": "baseUrlNotification",
+			"value": "http://localhost:8082",
+			"type": "string"
+		},
+		{
+			"key": "userEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userPassword",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "successOrderId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "failPaymentOrderId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "failWarehouseOrderId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "failDeliveryOrderId",
+			"value": "",
+			"type": "string"
+		}
+	]
+} 

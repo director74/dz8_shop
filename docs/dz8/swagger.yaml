@@ -1,0 +1,1196 @@
+openapi: 3.0.0
+info:
+  title: Микросервисная платформа электронной коммерции
+  description: |
+    API для микросервисной платформы электронной коммерции, включающей сервисы заказов, 
+    оплаты, доставки, склада, биллинга и уведомлений
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Сервис заказов
+  - url: http://localhost:8081
+    description: Сервис биллинга
+  - url: http://localhost:8082
+    description: Сервис уведомлений
+  - url: http://localhost:8083
+    description: Сервис платежей
+  - url: http://localhost:8084
+    description: Сервис склада
+  - url: http://localhost:8085
+    description: Сервис доставки
+
+tags:
+  - name: Auth
+    description: Аутентификация и регистрация пользователей
+  - name: Orders
+    description: Работа с заказами
+  - name: Billing
+    description: Работа с балансом и транзакциями
+  - name: Payments
+    description: Работа с платежами
+  - name: Warehouse
+    description: Управление складом
+  - name: Delivery
+    description: Управление доставкой
+  - name: Notifications
+    description: Отправка и просмотр уведомлений
+  - name: Health
+    description: Проверка здоровья сервисов
+
+paths:
+  # Сервис заказов - Аутентификация
+  /api/v1/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Регистрация нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+              required:
+                - username
+                - email
+                - password
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  username:
+                    type: string
+                  email:
+                    type: string
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Аутентификация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+                  format: password
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Успешная аутентификация
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+        '401':
+          description: Неверные учетные данные
+
+  # Сервис заказов - Заказы
+  /api/v1/users:
+    post:
+      tags:
+        - Orders
+      summary: Создание пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+              required:
+                - username
+                - email
+      responses:
+        '201':
+          description: Пользователь создан
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/orders:
+    post:
+      tags:
+        - Orders
+      summary: Создание заказа
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: integer
+                      quantity:
+                        type: integer
+                      price:
+                        type: number
+                        format: float
+                delivery:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                    time_slot_id:
+                      type: string
+                    zone_id:
+                      type: string
+      responses:
+        '201':
+          description: Заказ создан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: Ошибка в запросе
+        '401':
+          description: Пользователь не авторизован
+
+  /api/v1/orders/{id}:
+    get:
+      tags:
+        - Orders
+      summary: Получение заказа по ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация о заказе
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  status:
+                    type: string
+                  items:
+                    type: array
+                    items:
+                      type: object
+        '404':
+          description: Заказ не найден
+
+  /api/v1/users/{id}/orders:
+    get:
+      tags:
+        - Orders
+      summary: Получение списка заказов пользователя
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Список заказов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        '403':
+          description: Доступ запрещен
+
+  # Сервис биллинга
+  /api/v1/accounts:
+    post:
+      tags:
+        - Billing
+      summary: Создание аккаунта для биллинга
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                email:
+                  type: string
+                  format: email
+      responses:
+        '201':
+          description: Аккаунт создан
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/accounts/{user_id}:
+    get:
+      tags:
+        - Billing
+      summary: Получение информации об аккаунте пользователя
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация об аккаунте
+        '404':
+          description: Аккаунт не найден
+
+  /api/v1/billing/account:
+    get:
+      tags:
+        - Billing
+      summary: Получение информации о своем аккаунте
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Информация об аккаунте
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  user_id:
+                    type: integer
+                  balance:
+                    type: number
+                    format: float
+        '401':
+          description: Пользователь не авторизован
+
+  /api/v1/billing/deposit:
+    post:
+      tags:
+        - Billing
+      summary: Пополнение баланса
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Баланс пополнен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  transaction:
+                    type: object
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/billing/withdraw:
+    post:
+      tags:
+        - Billing
+      summary: Снятие средств с баланса
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: float
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Средства сняты
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  transaction:
+                    type: object
+        '400':
+          description: Ошибка в запросе или недостаточно средств
+
+  # Сервис платежей
+  /api/v1/payments/{id}:
+    get:
+      tags:
+        - Payments
+      summary: Получение платежа по ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация о платеже
+        '404':
+          description: Платеж не найден
+
+  /api/v1/payments/process:
+    post:
+      tags:
+        - Payments
+      summary: Обработка платежа
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                user_id:
+                  type: integer
+                amount:
+                  type: number
+                  format: float
+                payment_method:
+                  type: string
+      responses:
+        '200':
+          description: Платеж обработан
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/payments/{id}/cancel:
+    post:
+      tags:
+        - Payments
+      summary: Отмена платежа
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Платеж отменен
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/payments/by-order/{order_id}:
+    get:
+      tags:
+        - Payments
+      summary: Получение платежа по ID заказа
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация о платеже
+        '404':
+          description: Платеж не найден
+
+  /api/v1/payments/by-customer/{user_id}:
+    get:
+      tags:
+        - Payments
+      summary: Получение платежей пользователя
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список платежей
+        '403':
+          description: Доступ запрещен
+
+  # Сервис платежей - Внутренние API
+  /internal/payments/process:
+    post:
+      tags:
+        - Payments
+        - Internal
+      summary: Внутренняя обработка платежа
+      description: Эндпоинт для вызова другими сервисами, не требует стандартной аутентификации.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: Платеж обработан
+        '400':
+          description: Ошибка в запросе
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /internal/payments/by-order/{order_id}:
+    get:
+      tags:
+        - Payments
+        - Internal
+      summary: Внутреннее получение платежа по ID заказа
+      description: Эндпоинт для вызова другими сервисами, не требует стандартной аутентификации.
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация о платеже
+        '404':
+          description: Платеж не найден
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /internal/payments/{id}/cancel:
+    post:
+      tags:
+        - Payments
+        - Internal
+      summary: Внутренняя отмена платежа
+      description: Эндпоинт для вызова другими сервисами, не требует стандартной аутентификации.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Платеж отменен
+        '400':
+          description: Ошибка в запросе
+        '500':
+          description: Внутренняя ошибка сервера
+
+  # Сервис склада
+  /api/v1/warehouse/{id}:
+    get:
+      tags:
+        - Warehouse
+      summary: Получение товара по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация о товаре
+        '404':
+          description: Товар не найден
+
+  /api/v1/warehouse/product/{product_id}:
+    get:
+      tags:
+        - Warehouse
+      summary: Получение товара по ID продукта
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация о товаре
+        '404':
+          description: Товар не найден
+
+  /api/v1/warehouse:
+    get:
+      tags:
+        - Warehouse
+      summary: Получение списка всех товаров
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Список товаров
+
+  /api/v1/warehouse/check:
+    post:
+      tags:
+        - Warehouse
+      summary: Проверка наличия товаров
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: integer
+                      quantity:
+                        type: integer
+      responses:
+        '200':
+          description: Результат проверки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available:
+                    type: boolean
+
+  /api/v1/warehouse/reserve:
+    post:
+      tags:
+        - Warehouse
+      summary: Резервирование товаров
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                user_id:
+                  type: integer
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id:
+                        type: integer
+                      quantity:
+                        type: integer
+      responses:
+        '200':
+          description: Товары зарезервированы
+        '400':
+          description: Ошибка в запросе или недостаточно товаров
+
+  /api/v1/warehouse/release:
+    post:
+      tags:
+        - Warehouse
+      summary: Освобождение резервации товаров
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                user_id:
+                  type: integer
+      responses:
+        '200':
+          description: Резервация отменена
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/warehouse/confirm:
+    post:
+      tags:
+        - Warehouse
+      summary: Подтверждение резервации товаров
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                user_id:
+                  type: integer
+      responses:
+        '200':
+          description: Резервация подтверждена
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/warehouse/order/{order_id}:
+    get:
+      tags:
+        - Warehouse
+      summary: Получение резерваций для заказа
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список резерваций
+        '404':
+          description: Резервации не найдены
+
+  # Сервис склада - Внутренние API
+  /internal/warehouse/reserve:
+    post:
+      tags:
+        - Warehouse
+        - Internal
+      summary: Внутреннее резервирование товаров
+      description: Эндпоинт для вызова другими сервисами, не требует стандартной аутентификации.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReserveWarehouseRequest'
+      responses:
+        '200':
+          description: Товары зарезервированы
+        '400':
+          description: Ошибка в запросе или недостаточно товаров
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /internal/warehouse/release:
+    post:
+      tags:
+        - Warehouse
+        - Internal
+      summary: Внутреннее освобождение резервации товаров
+      description: Эндпоинт для вызова другими сервисами, не требует стандартной аутентификации.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseWarehouseRequest'
+      responses:
+        '200':
+          description: Резервация отменена
+        '400':
+          description: Ошибка в запросе
+        '500':
+          description: Внутренняя ошибка сервера
+
+  /internal/warehouse/confirm:
+    post:
+      tags:
+        - Warehouse
+        - Internal
+      summary: Внутреннее подтверждение резервации товаров
+      description: Эндпоинт для вызова другими сервисами, не требует стандартной аутентификации.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmWarehouseRequest'
+      responses:
+        '200':
+          description: Резервация подтверждена
+        '400':
+          description: Ошибка в запросе
+        '500':
+          description: Внутренняя ошибка сервера
+
+  # Сервис доставки
+  /api/v1/delivery/{id}:
+    get:
+      tags:
+        - Delivery
+      summary: Получение доставки по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация о доставке
+        '404':
+          description: Доставка не найдена
+
+  /api/v1/delivery/order/{order_id}:
+    get:
+      tags:
+        - Delivery
+      summary: Получение доставки по ID заказа
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация о доставке
+        '404':
+          description: Доставка не найдена
+
+  /api/v1/delivery/list:
+    get:
+      tags:
+        - Delivery
+      summary: Получение списка доставок
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Список доставок
+
+  /api/v1/delivery/check-availability:
+    post:
+      tags:
+        - Delivery
+      summary: Проверка доступности слотов доставки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                delivery_date:
+                  type: string
+                  format: date-time
+                zone_id:
+                  type: integer
+      responses:
+        '200':
+          description: Доступные слоты
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  available:
+                    type: boolean
+                  time_slots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        zone_id:
+                          type: integer
+                        start_time:
+                          type: string
+                        end_time:
+                          type: string
+
+  /api/v1/delivery/reserve:
+    post:
+      tags:
+        - Delivery
+      summary: Резервирование слота доставки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+                user_id:
+                  type: integer
+                address:
+                  type: string
+                time_slot_id:
+                  type: integer
+                zone_id:
+                  type: integer
+      responses:
+        '200':
+          description: Слот зарезервирован
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/delivery/release:
+    post:
+      tags:
+        - Delivery
+      summary: Освобождение слота доставки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+      responses:
+        '200':
+          description: Слот освобожден
+        '400':
+          description: Ошибка в запросе
+
+  /api/v1/delivery/confirm:
+    post:
+      tags:
+        - Delivery
+      summary: Подтверждение доставки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                order_id:
+                  type: integer
+      responses:
+        '200':
+          description: Доставка подтверждена
+        '400':
+          description: Ошибка в запросе
+
+  # Сервис уведомлений
+  /api/v1/notifications:
+    post:
+      tags:
+        - Notifications
+      summary: Отправка уведомления
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                type:
+                  type: string
+                  enum: [email, sms, push]
+                title:
+                  type: string
+                message:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '201':
+          description: Уведомление отправлено
+        '400':
+          description: Ошибка в запросе
+    get:
+      tags:
+        - Notifications
+      summary: Получение списка всех уведомлений
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Список уведомлений
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+
+  /api/v1/notifications/{id}:
+    get:
+      tags:
+        - Notifications
+      summary: Получение уведомления по ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Информация об уведомлении
+        '404':
+          description: Уведомление не найдено
+
+  /api/v1/users/{id}/notifications:
+    get:
+      tags:
+        - Notifications
+      summary: Получение списка уведомлений пользователя
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Список уведомлений
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+
+  # Health checks
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Проверка работоспособности сервисов
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    PaymentRequest:
+      type: object
+      properties:
+        order_id:
+          type: integer
+        user_id:
+          type: integer
+        amount:
+          type: number
+          format: float
+        payment_method:
+          type: string
+    ReserveWarehouseRequest:
+      type: object
+      properties:
+        order_id:
+          type: integer
+        user_id:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id:
+                type: integer
+              quantity:
+                type: integer
+    ReleaseWarehouseRequest:
+      type: object
+      properties:
+        order_id:
+          type: integer
+        user_id:
+          type: integer
+    ConfirmWarehouseRequest:
+      type: object
+      properties:
+        order_id:
+          type: integer
+        user_id:
+          type: integer 
